@@ -128,6 +128,7 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+#Rest Framework Authentication
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -135,13 +136,16 @@ REST_FRAMEWORK = {
      ],
 }
 
+#Credy aka OneFin API Credentials to call movie API
 MOVIE_API_URL = 'https://demo.credy.in/api/v1/maya/movies/'
 MOVIE_API_USER = 'iNd3jDMYRKsN1pjQPMRz2nrq7N99q4Tsp9EY9cM0'
 MOVIE_USER_PASS = 'Ne5DoTQt7p8qrgkPdtenTK8zd6MorcCR5vXZIJNfJwvfafZfcOs4reyasVYddTyXCz9hcL5FGGIVxw3q02ibnBLhblivqQTp4BIC93LZHj4OppuHQUzwugcYu7TIC5H1'
 
 
-
+#Custom to change token span
 SIMPLE_JWT = {
 'ACCESS_TOKEN_LIFETIME': timedelta(days=10),
 'REFRESH_TOKEN_LIFETIME': timedelta(days=20)
 }
+
+
