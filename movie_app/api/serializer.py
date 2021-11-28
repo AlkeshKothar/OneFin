@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 
 #rest framework imports
 from rest_framework import  serializers
-from rest_framework.permissions import IsAuthenticated
 
 #local imports
 from movie_app.models import Collections, Generes, Movie
@@ -44,32 +43,68 @@ class MovieSerializer(serializers.ModelSerializer):
 
 
 # Collections serializer
-class CollectionSerializer(serializers.ModelSerializer):
+class GETRetriveCollectionSerializer(serializers.ModelSerializer):
     movies = MovieSerializer(many=True)
     class Meta:
         model = Collections
         #fields = ('title','description','movies','description')
         fields = '__all__'
 
-    def validate_movies(self, movie_obj):
-        errors = []
-        for movie in movie_obj:
-            single_error = {}
-            if not movie.get('title'):
-                single_error['title'] = 'Title is required'
-            if not movie.get('description'):
-                single_error['description'] = 'Description is required'
-            if not movie.get('genres'):
-                single_error['genres'] = 'Genres is required'
-            if single_error:
-                errors.append(single_error)
+
+ 
+class POSTPUTCollectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collections
+        fields = '__all__'
+        validators = []
+
+    def run_validation(self, attrs):
+        if self.partial: return attrs  # skip validation for PUT since the values in PUT body are optional as mentioned in the doc
+        errors={}
+        if not attrs.get('title'):
+            errors['title'] = 'Title is required'
+        if not attrs.get('description'):
+            errors['description'] = 'Description is required'
+        if not attrs.get('movies'):
+            errors['movies'] = 'Movies are required'
+        if attrs.get('movies'):
+            movies_data = attrs.get('movies')
+            for movie in movies_data:
+                single_error = {}
+                if not movie.get('title'):
+                    single_error['title'] = 'Title is required'
+                if not movie.get('description'):
+                    single_error['description'] = 'Description is required'
+                if not movie.get('genres'):
+                    single_error['genres'] = 'Genres is required'
+                if single_error:
+                    if errors.get('movies'):
+                        errors['movies'].append(single_error)
+                    else: 
+                        errors['movies'] = [single_error]
         if errors:
             raise serializers.ValidationError(errors)
-        return movie_obj
+        return attrs
 
     def create(self, validated_data):
-        all_movies = []
         movies_data = validated_data.pop('movies')
+        all_movies = handle_movies_and_geners(movies_data)
+        collection_obj = Collections.objects.create(**validated_data)
+        collection_obj.movies.set(all_movies)
+        return collection_obj
+    
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
+        if validated_data.get('movies'):
+            movies_data = validated_data.get('movies')
+            all_movies = handle_movies_and_geners(movies_data)
+            instance.movies.set(all_movies)
+        instance.save()
+        return instance
+
+def handle_movies_and_geners(movies_data):
+        all_movies = []
         for movie in movies_data:
             all_gener = []
             geners_data = movie.pop('genres')
@@ -77,18 +112,10 @@ class CollectionSerializer(serializers.ModelSerializer):
                 obj, created = Generes.objects.get_or_create(**each_geners)
                 all_gener.append(obj)
             obj, created = Movie.objects.get_or_create(**movie)
-            obj.genres.add(*all_gener)
+            obj.genres.set(all_gener)
             obj.save()
             all_movies.append(obj)
-        collection_obj, created = Collections.objects.get_or_create(**validated_data)
-        collection_obj.movies.add(*all_movies)
-        return collection_obj
-
- 
- 
-
-        
-
+        return all_movies
        
         
         

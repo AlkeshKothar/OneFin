@@ -5,17 +5,17 @@ from django.urls import reverse
 import requests
 
 #rest framework imports
-from rest_framework import viewsets, status,generics, permissions, mixins
+from rest_framework import viewsets, status,generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-
+from rest_framework.permissions import IsAuthenticated
 
 #local imports
-from .serializer import RegisterSerializer, UserSerializer,UserSerializer,GeneresSerializer,MovieSerializer,CollectionSerializer
+from .serializer import RegisterSerializer,GETRetriveCollectionSerializer,POSTPUTCollectionSerializer
 from movie_app.models import Collections
-from movie_app.models import Generes , Movie , Collections 
+from .permissions import IsCollectionOwnerLoggedIn
 
 
 #Register API
@@ -52,9 +52,10 @@ class MovieView(APIView):
 #Collection API to add movies to custom collection
 class CollectionsView(viewsets.ViewSet):
 
-    serializer_class = CollectionSerializer
+    serializer_class = GETRetriveCollectionSerializer
+    permission_classes = [IsAuthenticated, IsCollectionOwnerLoggedIn]
     """
-    Example:
+    Example: 
 
     {
     "title": "Web Series",
@@ -67,55 +68,49 @@ class CollectionsView(viewsets.ViewSet):
             "uuid": "4802ed90-7129-4d53-919f-35c8974b47e6"
         }
     ],
-    "created_by": int:enter pk of user
+    "created_by": 1
     }
 
     """
     
     def list(self, request):
-        #data = Collections.objects.filter(created_by=request.user)
-        data = Collections.objects.all()
+        data = Collections.objects.filter(created_by=request.user)
         serializer = self.serializer_class(data, many=True)
         return Response(serializer.data)
 
-
     def create(self, request):
-        # permission_classes = [IsAuthenticated]
-        serializer = self.serializer_class(data=request.data)
+        request.data['created_by'] = request.user
+        serializer = POSTPUTCollectionSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            resp = {"collection_uuid": serializer.data['uuid']}
+            return Response(resp, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     def retrieve(self, request, pk=None):
-        # permission_classes = [IsAuthenticated]
         data = Collections.objects.get(uuid=pk)
         serializer = self.serializer_class(data)
         return Response(serializer.data)
 
     def update(self, request, pk=None):
         obj = Collections.objects.get(uuid=pk)
-        serializer = self.serializer_class(obj, data=request.data, partial=True)
+        serializer = POSTPUTCollectionSerializer(obj, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
-        return Response("Something went wrong",status=status.HTTP_400_BAD_REQUEST)
-
-
-    def partial_update(self, request, pk=None):
-        pass
-        
+            resp = {"message": "Record updated successfully"}
+            return Response(resp, status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, pk=None):
-        #permission_classes = [permissions.IsAuthenticated,]
         try:
             data = Collections.objects.get(uuid=pk)
             data.delete()
-            return Response("Record Deleted ",status=status.HTTP_200_OK)
+            resp = {"message": "Record deleted successfully"}
+            return Response(resp,status=status.HTTP_200_OK)
         except:
-            pass
-        return Response("No such records found...",status=status.HTTP_204_NO_CONTENT)
+            resp = {"message": "No such records found.."}
+        return Response(resp,status=status.HTTP_204_NO_CONTENT)
 
 

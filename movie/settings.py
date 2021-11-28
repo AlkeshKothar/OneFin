@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'drf_yasg',
     'rest_framework',
     'movie_app'
 ]
@@ -148,4 +149,13 @@ SIMPLE_JWT = {
 'REFRESH_TOKEN_LIFETIME': timedelta(days=20)
 }
 
-
+#swagger ui settting
+SWAGGER_SETTINGS = {
+   'SECURITY_DEFINITIONS': {
+      'AccessToken': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+      }
+   }
+}
